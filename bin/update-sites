@@ -1,0 +1,60 @@
+#!/bin/bash -eu
+# Keep this first, $_ changes after first command:
+readonly ScriptPath="$_"
+
+readonly ProgramName="$(basename "$0" .sh)"
+readonly TopDir="$(cd "$(dirname "$ScriptPath")"; cd ..; pwd)"
+readonly WellKnownTop='.well-known/openpgpkey'
+
+note() { printf >&2 '%s: %s\n' "$ProgramName" "$*"; }
+
+which pcregrep >/dev/null 2>&1
+test -f "$TopDir/config/keys"
+test -f "$TopDir/config/domains"
+python -c 'import pdpzbase32'  # is in .personal
+
+test -d "$TopDir/sites"
+rm -rf "$TopDir/sites"
+mkdir -pv "$TopDir/sites"
+
+readonly Keys=($(grep '^[^#]' "$TopDir/config/keys"))
+readonly Domains=($(grep '^[^#]' "$TopDir/config/domains"))
+
+for domain in "${Domains[@]}"; do
+	for wellknown in "$WellKnownTop/$domain" "$WellKnownTop"; do
+		d="$TopDir/sites/$domain/$wellknown"
+		mkdir -pv "$d/hu"
+		touch "$d/policy"
+	done
+done
+
+for key in "${Keys[@]}"; do
+	# quiet for `please do a --check-trustdb` warnings
+	emails=($(
+		gpg --quiet --batch --with-colons --import-options show-only \
+			--import "keyrings/${key}.asc" |
+			grep '^uid:' |
+			cut -d : -f 10 |
+			pcregrep -o1 '<([^@>]+@[^>]+)>' |
+			sort -u
+		))
+	note "Key $key emails: ${emails[*]}"
+
+	for email in "${emails[@]}"; do
+		domain="${email##*@}"
+		lhs="${email%@*}"
+		# Filter out domains which we're not handling here
+		test -d "$TopDir/sites/$domain" || continue
+
+		encoded_lhs="$(python -c '
+import hashlib, sys, pdpzbase32
+print(pdpzbase32.encode(hashlib.sha1(sys.argv[1].lower().encode("ASCII")).digest()).decode("ASCII"))' "$lhs")"
+		note "[$key] $email -> $domain :: $lhs :: $encoded_lhs"
+
+		for wellknown in "$WellKnownTop/$domain" "$WellKnownTop"; do
+			d="$TopDir/sites/$domain/$wellknown/hu"
+			touch "$d/$encoded_lhs"
+			gpg --dearmor < "keyrings/${key}.asc" >> "$d/$encoded_lhs"
+		done
+	done
+done
