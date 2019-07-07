@@ -7,13 +7,14 @@ readonly TopDir="$(cd "$(dirname "$ScriptPath")"; cd ..; pwd)"
 readonly WellKnownTop='.well-known/openpgpkey'
 
 note() { printf >&2 '%s: %s\n' "$ProgramName" "$*"; }
+die() { note "$@"; exit 1; }
 
-which pcregrep >/dev/null 2>&1
-test -f "$TopDir/config/keys"
-test -f "$TopDir/config/domains"
-python -c 'import pdpzbase32'  # is in .personal
+which pcregrep >/dev/null 2>&1    || die "missing command: pcregrep"
+test -f "$TopDir/config/keys"     || die "missing config/keys"
+test -f "$TopDir/config/domains"  || die "missing config/domains"
+python -c 'import pdpzbase32'     || die "missing python pdpzbase32 (from .personal)"
 
-test -d "$TopDir/sites"
+test -d "$TopDir/sites"           || die "missing sites dir"
 rm -rf "$TopDir/sites"
 mkdir -pv "$TopDir/sites"
 
