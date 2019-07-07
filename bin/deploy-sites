@@ -1,0 +1,55 @@
+#!/bin/bash -eu
+# Keep this first, $_ changes after first command:
+readonly ScriptPath="$_"
+
+readonly ProgramName="$(basename "$0" .sh)"
+readonly TopDir="$(cd "$(dirname "$ScriptPath")"; cd ..; pwd)"
+readonly WellKnownTop='.well-known/openpgpkey'
+
+note() { printf >&2 '%s: %s\n' "$ProgramName" "$*"; }
+die() { note "$@"; exit 1; }
+
+which rsync >/dev/null 2>&1       || die "missing command rsync"
+test -f "$TopDir/config/deploys"  || die "missing config/deploys"
+test -d "$TopDir/sites"           || die "missing sites dir"
+
+deploy_rsync() {
+	local site="${1:?}" target="${2:?}"
+	local rsync_opts opt should_delete
+	shift 2
+
+	rsync_opts=(-crlv --chmod=u=rwX,go=rX)
+	should_delete=false
+	for opt; do
+		case "$opt" in
+		delete) should_delete=true ;;
+		esac
+	done
+	#rsync_opts+=(--dry-run)
+
+	rsync "${rsync_opts[@]}" "$TopDir/sites/$site/" "$target/"
+	if $should_delete; then
+		rsync "${rsync_opts[@]}" --delete "$TopDir/sites/$site/.well-known/openpgpkey/" "$target/.well-known/openpgpkey/"
+	fi
+}
+
+while read -r site deploy_to colon_options; do
+	IFS=: read -a options <<<"$colon_options"
+	echo "Site: $site"
+	echo "To  : $deploy_to"
+	echo "Opts: ${options[*]}"
+
+	method=''
+	for k in "${options[@]}"; do
+		case "$k" in
+		rsync) method="$k" ;;
+		esac
+	done
+	[[ -n "$method" ]] || die "no known deployment method for $site/$deploy_to"
+
+	case "$method" in
+	rsync) deploy_rsync "$site" "$deploy_to" "${options[@]}" ;;
+	esac
+
+	echo
+done < <(grep '^[^#]' "$TopDir/config/deploys")
