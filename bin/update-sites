@@ -12,6 +12,8 @@ die() { note "$@"; exit 1; }
 python='python'
 if which python3 >/dev/null 2>&1; then python='python3'; fi
 
+export PYTHONPATH="${TopDir}/lib/python${PYTHONPATH:+:}${PYTHONPATH:-}"
+
 which pcregrep >/dev/null 2>&1    || die "missing command: pcregrep"
 test -f "$TopDir/config/keys"     || die "missing config/keys"
 test -f "$TopDir/config/domains"  || die "missing config/domains"
