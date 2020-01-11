@@ -1,3 +1,4 @@
 # Deploys via SSH to tower
 spodhuis.org		tower:/www/openpgpkey.spodhuis.org/content	rsync:delete
 pennock-tech.com	tower:/www/openpgpkey.pennock-tech.com/content	rsync:delete
+exim.org		hummus:/srv/wellknown-web/openpgpkey.exim.org   rsync:delete

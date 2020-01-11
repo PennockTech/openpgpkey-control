@@ -8,7 +8,7 @@ readonly TopDir="$(cd "$(dirname "$ScriptPath")"; cd ..; pwd)"
 note() { printf >&2 '%s: %s\n' "$ProgramName" "$*"; }
 
 test -f "$TopDir/config/keys"
-keys=($(grep '^[^#]' "$TopDir/config/keys"))
+keys=($(grep '^[^#]' "$TopDir/config/keys" | sort -u))
 
 for key in "${keys[@]}"; do
 	note "Key: $key"
