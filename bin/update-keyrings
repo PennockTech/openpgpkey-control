@@ -6,9 +6,16 @@ readonly ProgramName="$(basename "$0" .sh)"
 readonly TopDir="$(cd "$(dirname "$ScriptPath")"; cd ..; pwd)"
 
 note() { printf >&2 '%s: %s\n' "$ProgramName" "$*"; }
+die() { note "$@"; exit 1; }
 
 test -f "$TopDir/config/keys"
 keys=($(grep '^[^#]' "$TopDir/config/keys" | sort -u))
+
+# Trust that test -f check to have validated that $TopDir is safe to use before
+# nuking keyrings and recreating it.
+
+rm -rf "$TopDir/keyrings"
+mkdir -pv "$TopDir/keyrings"
 
 for key in "${keys[@]}"; do
 	note "Key: $key"
