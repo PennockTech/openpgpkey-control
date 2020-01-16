@@ -3,7 +3,8 @@
 readonly ScriptPath="$_"
 
 readonly ProgramName="$(basename "$0" .sh)"
-readonly TopDir="$(cd "$(dirname "$ScriptPath")"; cd ..; pwd)"
+# ScriptPath instead of $0 breaks if we invoke bash on this file manually:
+readonly TopDir="$(cd "$(dirname "$0")"; cd ..; pwd)"
 readonly WellKnownTop='.well-known/openpgpkey'
 
 note() { printf >&2 '%s: %s\n' "$ProgramName" "$*"; }
@@ -14,9 +15,9 @@ if which python3 >/dev/null 2>&1; then python='python3'; fi
 
 export PYTHONPATH="${TopDir}/lib/python${PYTHONPATH:+:}${PYTHONPATH:-}"
 
-which pcregrep >/dev/null 2>&1    || die "missing command: pcregrep"
 test -f "$TopDir/config/keys"     || die "missing config/keys"
 test -f "$TopDir/config/domains"  || die "missing config/domains"
+$python -c 1                      || die "missing python interpreter ($python)"
 $python -c 'import pdpzbase32'    || die "missing python pdpzbase32 (from .personal)"
 
 test -d "$TopDir/sites"           || die "missing sites dir"
@@ -39,14 +40,30 @@ for domain in "${Domains[@]}"; do
 EOHTML
 done
 
+# emails_from_colon_listing():
+# On stdin, `gpg --with-colons` listing with uid lines
+# On stdout, the email addresses therein, unordered with dups.
+if which pcregrep >/dev/null 2>&1; then
+  emails_from_colon_listing() { grep '^uid:' | cut -d : -f 10 | pcregrep -o1 '<([^@>]+@[^>]+)>'; }
+else
+  # Well, we'll be about to cause a Python interpreter to be paged in anyway.
+  emails_from_colon_listing() { $python -c '
+import re, sys
+extract = re.compile(r"<([^@>]+@[^>]+)>")
+for fields in [line.split(":") for line in sys.stdin]:
+    if fields[0] == "uid":
+        m = extract.search(fields[9])
+        print(m.group(1))
+'
+  }
+fi
+
 for key in "${Keys[@]}"; do
 	# quiet for `please do a --check-trustdb` warnings
 	emails=($(
 		gpg --quiet --batch --with-colons --import-options show-only \
 			--import "keyrings/${key}.asc" |
-			grep '^uid:' |
-			cut -d : -f 10 |
-			pcregrep -o1 '<([^@>]+@[^>]+)>' |
+			emails_from_colon_listing |
 			sort -u
 		))
 	note "Key $key emails: ${emails[*]}"
