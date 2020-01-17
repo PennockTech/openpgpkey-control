@@ -1,0 +1,3 @@
+Perhaps I should emit a directory of DNS zonefile fragments,
+which can be $INCLUDE'd into a parent zone, to handle various DNS records.
+Automatically.
