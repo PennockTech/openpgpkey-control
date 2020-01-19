@@ -1,7 +1,9 @@
 openpgpkey
 ==========
 
-Tools to manage the content of openpgpkey websites.
+Tools to manage the content of OpenPGP Web Key Directory websites, aka
+the openpgpkey well-known area.
+
 Optional ability to make a Docker image to act as a webserver for such a site.
 
 You should be able to fork this repo, change only the files in `config/` and
@@ -19,6 +21,10 @@ The `sites` directory is deleted and recreated by one of the tools.
 How the content gets served is entirely up to you, this repo does nothing to
 manage remote web-server configuration.  It only manages content.
 
+In addition, the `bundles/` directory is deleted and recreated from from
+another tool; these files are not openpgpkey, but they are in the family of
+"things which get published for others to rely upon".
+
 
 ### Config
 
@@ -27,6 +33,8 @@ manage remote web-server configuration.  It only manages content.
 * `deploys` lists mappings of domains to deployment targets; a given domain
   can be deployed more than once.  The configuration and tool coding is
   written to be flexible to support more mechanisms for deployment.
+* `bundle.*` are files named for the bundle they create, listing the PGP keys
+  to be included in those bundles.
 
 
 ### Tools
@@ -39,6 +47,9 @@ manage remote web-server configuration.  It only manages content.
    administrative setup or web-server configuration.  That is outside the
    scope of this tool (or this repo, with no current plans to bring it in
    scope).
+4. `update-bundles` creates keyrings from configuration files with names
+   starting `bundle.`; these bundles are expected to contain cross-signatures,
+   so are not made from the versions of the files included in the repo.
 
 Both of the first two tools mutate the content of this repository, but will
 often re-create the exact same content, letting Git handle the lack of
