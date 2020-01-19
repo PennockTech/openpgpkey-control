@@ -3,7 +3,8 @@
 readonly ScriptPath="$_"
 
 readonly ProgramName="$(basename "$0" .sh)"
-readonly TopDir="$(cd "$(dirname "$ScriptPath")"; cd ..; pwd)"
+# nb: ScriptPath changes to the interpreter if invoked manually
+readonly TopDir="$(cd "$(dirname "$0")"; cd ..; pwd)"
 
 note() { printf >&2 '%s: %s\n' "$ProgramName" "$*"; }
 die() { note "$@"; exit 1; }
@@ -20,7 +21,8 @@ cd ..
 rm -rf "$TopDir/bundles"
 mkdir -pv "$TopDir/bundles"
 
-dumpsdir="$(mktemp -d bundle-dumps.XXXXXXXX)" || die "failed to create a temp dir"
+# mktemp portability, still a thing in 2020.
+dumpsdir="$(mktemp -d "${TMPDIR:-/tmp}/bundle-dumps.XXXXXXXX")" || die "failed to create a temp dir"
 remove_tmp() { rm -rf -- "$dumpsdir"; }
 trap remove_tmp EXIT INT TERM
 
