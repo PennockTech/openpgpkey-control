@@ -1,0 +1,68 @@
+#!/bin/bash -eu
+# Keep this first, $_ changes after first command:
+readonly ScriptPath="$_"
+
+readonly ProgramName="$(basename "$0" .sh)"
+readonly TopDir="$(cd "$(dirname "$ScriptPath")"; cd ..; pwd)"
+
+note() { printf >&2 '%s: %s\n' "$ProgramName" "$*"; }
+die() { note "$@"; exit 1; }
+
+: "${GNUPGHOME:=$HOME/.gnupg}"
+readonly initial_GNUPGHOME="$GNUPGHOME"
+
+cd "$TopDir/config"
+bundle_files=( bundle.* )
+cd ..
+
+[[ "${#bundle_files[@]}" -gt 0 ]] || die "no bundles defined"
+
+rm -rf "$TopDir/bundles"
+mkdir -pv "$TopDir/bundles"
+
+dumpsdir="$(mktemp -d bundle-dumps.XXXXXXXX)" || die "failed to create a temp dir"
+remove_tmp() { rm -rf -- "$dumpsdir"; }
+trap remove_tmp EXIT INT TERM
+
+# Each bundle is self-contained with full cross-sigs, where applicable.
+# The versions we've dumped into keys are minimal, lacking the cross-sigs,
+# and we don't necessarily have all the bundle keys in this repo.
+# So this works directly from your local keyring.
+update_one_bundle() {
+	local bundleconf bundlesrc bundlename bundleout
+	local tmp src ghome
+	bundleconf="${1:?need a bundle.foo file}"
+	bundlesrc="$TopDir/config/$bundleconf"
+	bundlename="${bundle#bundle.}"
+	bundleout="$TopDir/bundles/${bundlename}.asc"
+	tmp="$dumpsdir/$bundlename"
+	mkdir -- "$tmp"
+
+	keys=($(grep '^[^#]' -- "$bundlesrc" | sed $'s/[ \t]*#.*$//' | sort -u))
+	for key in "${keys[@]}"; do
+		src="$TopDir/keyrings/${key}.asc"
+		test -f "$src" || continue
+		cp -- "$src" "$tmp/./"
+	done
+	export GNUPGHOME="$initial_GNUPGHOME"
+	gpg > "$tmp/from-local-keyring.asc" \
+		-a --export-options no-export-attributes,export-clean --export "${keys[@]}"
+
+	export GNUPGHOME="$tmp"
+	gpg --import -- "$tmp"/*.asc
+
+	gpg > "$bundleout" \
+		-a --export-options export-clean --export "${keys[@]}"
+
+	export GNUPGHOME="$initial_GNUPGHOME"
+}
+
+for bundle in "${bundle_files[@]}"; do
+	update_one_bundle "$bundle"
+done
+
+tree "$dumpsdir" 2>/dev/null || ls -lR "$dumpsdir"
+
+cd "$TopDir/bundles"
+ls -l
+openssl dgst -sha256 ./* | sed 's,(\./,(,'
