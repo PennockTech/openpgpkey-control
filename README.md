@@ -6,8 +6,9 @@ the openpgpkey well-known area.
 
 Optional ability to make a Docker image to act as a webserver for such a site.
 
-You should be able to fork this repo, change only the files in `config/` and
-use the tooling to regenerate the rest, for your own usage.
+You should be able to "fork" this repo to create your organization's own
+canonical store, then change only the files in `config/` and use the tooling
+to regenerate the rest, for your own usage.
 
 The tools in `bin/` use configuration files in `config/` to update
 `keyrings/`, `sites/` and to deploy to set content live.
@@ -166,12 +167,69 @@ The content layout _should_ be compatible with
 <https://datatracker.ietf.org/doc/draft-koch-openpgp-webkey-service/?include_text=1>
 version `08`.
 
+### Requirements and Constraints
+
+#### Used Tools
+
+* GnuPG; tested with version 2.2.19 in initial development, I expect this to
+  advance.  Some tools (eg, the DNS fragments export) is known to require
+  "sufficiently recent" versions of GnuPG, so something old packaged with the
+  OS might not be sufficient.  I (Phil Pennock) use my packages in the apt
+  repos at <https://public-packages.pennock.tech/>, installing into
+  /opt/gnupg/.
+* Bash
+* Python (3)
+* rsync, for the bundled deploy mechanism (replaceable)
+* Docker / Caddy : entirely optional, for the demo container service
+
+I am not averse to rewriting the bash scripts into Python; working code beats
+adherence to local policies on maximum lengths for shell scripts.  I'm not
+adverse to rewriting this all in Go, or Rust, or some other language.
+
+But what you have here is what I'm using.  When you fork it for your own use,
+feel free to swap out whatever parts you think should be replaced.  If you
+feel like sharing back upstream, please consider a pull-request.
+
+
+#### Design points to note
+
+An arbitrary unfiltered key or signature upon a key from a local keyring
+**MUST NEVER BE ADDED TO THE REPO**.
+
+Dan Gillmor (dkg) has a draft for abuse-resistant keyservers,
+<https://tools.ietf.org/html/draft-dkg-openpgp-abuse-resistant-keystore-03>,
+which defines the term "Toxic Data".
+
+The motivation for this repository came about in the aftermath of the collapse
+of the old SKS peering mesh of HKP keyservers, which the community relied upon
+for a long time.  Since spam and abuse is already happening, targeting the
+keys of PGP ecosystem developers, it would be foolhardy to design a new
+append-only trust store which commits in unchecked data.  Git is an
+append-only trust store, in this context.  You can delete a file from the
+tree, but it remains part of history without a repository rewrite and
+force-pushes and garbage collection runs.
+
+So our core specifier is the fingerprint, and we use that to update the
+`keyrings/` area, which has "minimal" exports of each key: that is, the key,
+its sub-keys (all self-signed by the key itself), the uids (all self-signed)
+and nothing else.
+
+For the bundles, we use "clean" exports, which allows for a signature from
+another key, if that key is known to the keyring, and we arrange to ensure
+that the keyring which generates those exports only includes the keys in this
+repo and specified in the bundles.
+
+If, in future, we add an "auxiliary-keys" concept, of keys which we'll track
+and include the signatures of in bundles, we'll need to carefully consider
+what allow in for each auxiliary key: perhaps only signatures from the
+`config/aux-keys` and `config/keys` files?
+
+
 ### Future
 
 We should consider for the bundle tooling if we should keep "fatter" keyrings
-in-repo: this can't be "all the signatures seen locally get imported" as that
-leads to problems with spammed keys and toxic content existing in-repo, but it
-could include "the same cross-sigs which we include into the bundle"; this
-would at least ensure that there are not regressions in included
-cross-signatures, only ever trending up.
+in-repo: the toxic data notes in the design points above mean we'd need to
+carefully define what is included in "fatter"; it could include "the same
+cross-sigs which we include into the bundle"; this would at least ensure that
+there are not regressions in included cross-signatures, only ever trending up.
 
