@@ -16,7 +16,9 @@ All config files in `config/` allow for comment-lines starting with an
 `#` octothorpe.
 
 The `keyrings` directory is deleted and recreated by one of the tools.  
-The `sites` directory is deleted and recreated by one of the tools.
+The `sites` directory is deleted and recreated by one of the tools.  
+The `dns` directory (for PKA, not openpgpkey) is deleted and recreated by one
+of the tools.
 
 How the content gets served is entirely up to you, this repo does nothing to
 manage remote web-server configuration.  It only manages content.
@@ -33,6 +35,8 @@ another tool; these files are not openpgpkey, but they are in the family of
 * `deploys` lists mappings of domains to deployment targets; a given domain
   can be deployed more than once.  The configuration and tool coding is
   written to be flexible to support more mechanisms for deployment.
+* `dns-zones` lists DNS zones (domains in this context) for which we should
+  generate fragments of zonefiles listing PGP-related material.
 * `bundle.*` are files named for the bundle they create, listing the PGP keys
   to be included in those bundles.
 
@@ -43,18 +47,28 @@ another tool; these files are not openpgpkey, but they are in the family of
    the current GnuPG keyring as reached with default options.
    It replaces the `keyrings/` area with fresh exports.
 2. `update-sites` deletes the `sites/` area and re-creates it.
-3. `deploy-sites` deploys the _content_ area of sites; it has no knowledge of
+3. `update-dns-fragments` deletes the `dns/` area and re-creates it.
+4. `deploy-sites` deploys the _content_ area of sites; it has no knowledge of
    administrative setup or web-server configuration.  That is outside the
    scope of this tool (or this repo, with no current plans to bring it in
    scope).
-4. `update-bundles` creates keyrings from configuration files with names
+5. `update-bundles` creates keyrings from configuration files with names
    starting `bundle.`; these bundles are expected to contain cross-signatures,
-   so are not made from the versions of the files included in the repo.
+   so are not made (exclusively) from the versions of the files included in
+   the repo.
 
-Both of the first two tools mutate the content of this repository, but will
+Both of the first three tools mutate the content of this repository, but will
 often re-create the exact same content, letting Git handle the lack of
-differences.  The third tool should make no local changes.
+differences.  The fourth tool should make no local changes.  The fifth tool
+creates content excluded from this repository.
 
+For OpenPGP Web Key Directory content, you use the three tools, in order:
+`update-keyrings`, `update-sites`, `deploy-sites`.
+
+For DNS zonefile fragments, you use `update-keyrings` then
+`update-dns-fragments`.
+
+For bundles of distributable keyrings, you use `update-bundles`.
 
 ### Customizing
 
@@ -151,3 +165,13 @@ the billions of users of OpenPGP and WKD out there.
 The content layout _should_ be compatible with
 <https://datatracker.ietf.org/doc/draft-koch-openpgp-webkey-service/?include_text=1>
 version `08`.
+
+### Future
+
+We should consider for the bundle tooling if we should keep "fatter" keyrings
+in-repo: this can't be "all the signatures seen locally get imported" as that
+leads to problems with spammed keys and toxic content existing in-repo, but it
+could include "the same cross-sigs which we include into the bundle"; this
+would at least ensure that there are not regressions in included
+cross-signatures, only ever trending up.
+

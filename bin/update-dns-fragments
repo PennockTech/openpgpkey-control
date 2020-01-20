@@ -1,0 +1,90 @@
+#!/bin/bash -eu
+#
+# Make DNS zonefile fragments for keys.
+#
+# We only use the keys in keyrings, because we can only emit records for keys
+# which are in-zone, using the exact same bailiwick criteria as for openpgpkey
+# and website files.  If a key is in a keyring bundle, that doesn't help us.
+#
+# We also don't need cross-key signatures and have no need to go out to external
+# keyrings, so the DNS content can be made deterministically based upon the
+# keyrings in repo with no external dependencies.  Just like sites, but unlike
+# bundles.
+
+readonly ProgramName="$(basename "$0" .sh)"
+readonly TopDir="$(cd "$(dirname "$0")"; cd ..; pwd)"
+
+note() { printf >&2 '%s: %s\n' "$ProgramName" "$*"; }
+die() { note "$@"; exit 1; }
+
+python='python'
+if which python3 >/dev/null 2>&1; then python='python3'; fi
+
+test -f "$TopDir/config/dns-zones" || die "missing config/dns-zones"
+test -d "$TopDir/keyrings"         || die "missing keyrings"
+$python -c 1                       || die "missing python interpreter ($python)"
+
+readonly Zones=($(grep '^[^#]' "$TopDir/config/dns-zones"))
+
+[[ "${#Zones[@]}" -gt 0 ]] || die "no dns-zones defined"
+
+rm -rf "$TopDir/dns/fragments"
+mkdir -pv "$TopDir/dns/fragments"
+
+# mktemp portability, still a thing in 2020.
+top_tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/pgpkey.dns.XXXXXXXX")" || die "failed to create a temp dir"
+remove_tmp() { rm -rf -- "$top_tmp_dir"; }
+trap remove_tmp EXIT INT TERM
+
+export GNUPGHOME="$top_tmp_dir/gnupghome"
+mkdir -m 0700 -- "$GNUPGHOME"
+
+gpg --import -- "$TopDir/keyrings"/*.asc
+
+# I'd usually do this in Perl with a grotesque one-liner using -00 and a
+# schwartzian transform, # but this repo already is bash+python,
+# so let's use Python here.
+# This, and its length, is a good sign that this tool should be rewritten
+# into Python.  Working beats unwritten perfect.
+
+sort_by_rrname() { "$python" -c '
+import sys
+all_entries = {}
+entry = []
+rrname = None
+for lineno0, line in enumerate(sys.stdin):
+  if not line.rstrip():
+    if entry:
+      if not rrname:
+        raise Exception("no rrname in stanza, line {}".format(lineno0+1))
+      all_entries[rrname] = entry
+    entry = []
+    rrname = None
+    continue
+  entry.append(line)
+  if line[0] not in ("$", ";", "#", " ", "\t"):
+    if rrname is not None:
+      raise Exception("two rrname lines in one stanza, line {}".format(lineno0+1))
+    rrname = line.split()[0]
+
+for key in sorted(all_entries):
+  for line in all_entries[key]:
+    print(line, end="")
+  print()
+'
+}
+
+for zone in "${Zones[@]}"; do
+	unsorted_pka="$top_tmp_dir/include.pka-fp.$zone"
+	sorted_pka="$TopDir/dns/fragments/include.pka-fp.$zone"
+	unsorted_dane="$top_tmp_dir/include.dane.$zone"
+	sorted_dane="$TopDir/dns/fragments/include.dane.$zone"
+
+	gpg > "$unsorted_pka" \
+		--export-options export-pka --export-filter "keep-uid=uid =~ @$zone" --export
+	sort_by_rrname < "$unsorted_pka" > "$sorted_pka"
+
+	gpg > "$unsorted_dane" \
+		--export-options export-dane --export-filter "keep-uid=uid =~ @$zone" --export
+	sort_by_rrname < "$unsorted_dane" > "$sorted_dane"
+done
