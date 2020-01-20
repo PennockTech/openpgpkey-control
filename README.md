@@ -222,7 +222,9 @@ repo and specified in the bundles.
 If, in future, we add an "auxiliary-keys" concept, of keys which we'll track
 and include the signatures of in bundles, we'll need to carefully consider
 what allow in for each auxiliary key: perhaps only signatures from the
-`config/aux-keys` and `config/keys` files?
+`config/aux-keys` and `config/keys` files?  Or perhaps allow for signatures
+which have reciprocal signatures?  "Accept Fred's signature on Wilma's key,
+but only because Fred's key has a signature by Wilma's key."
 
 
 ### Future
