@@ -42,14 +42,16 @@ mkdir -m 0700 -- "$GNUPGHOME"
 gpg --import -- "$TopDir/keyrings"/*.asc
 
 # I'd usually do this in Perl with a grotesque one-liner using -00 and a
-# schwartzian transform, # but this repo already is bash+python,
+# schwartzian transform, but this repo already is bash+python,
 # so let's use Python here.
 # This, and its length, is a good sign that this tool should be rewritten
 # into Python.  Working beats unwritten perfect.
+#
+# Beware multiple keys for the same UID, during transitions.
 
 sort_by_rrname() { "$python" -c '
-import sys
-all_entries = {}
+import collections, sys
+all_entries = collections.defaultdict(list)
 entry = []
 rrname = None
 for lineno0, line in enumerate(sys.stdin):
@@ -57,7 +59,7 @@ for lineno0, line in enumerate(sys.stdin):
     if entry:
       if not rrname:
         raise Exception("no rrname in stanza, line {}".format(lineno0+1))
-      all_entries[rrname] = entry
+      all_entries[rrname].append(entry)
     entry = []
     rrname = None
     continue
@@ -68,9 +70,10 @@ for lineno0, line in enumerate(sys.stdin):
     rrname = line.split()[0]
 
 for key in sorted(all_entries):
-  for line in all_entries[key]:
-    print(line, end="")
-  print()
+  for entry in all_entries[key]:
+    for line in entry:
+      print(line, end="")
+    print()
 '
 }
 
