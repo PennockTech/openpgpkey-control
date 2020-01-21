@@ -31,12 +31,13 @@ trap remove_tmp EXIT INT TERM
 # and we don't necessarily have all the bundle keys in this repo.
 # So this works directly from your local keyring.
 update_one_bundle() {
-	local bundleconf bundlesrc bundlename bundleout
+	local bundleconf bundlesrc bundlename bundleout bundleeachdir
 	local tmp src ghome
 	bundleconf="${1:?need a bundle.foo file}"
 	bundlesrc="$TopDir/config/$bundleconf"
 	bundlename="${bundle#bundle.}"
 	bundleout="$TopDir/bundles/${bundlename}.asc"
+	bundleeachdir="$TopDir/bundles/each-${bundlename}"
 	tmp="$dumpsdir/$bundlename"
 	mkdir -- "$tmp"
 
@@ -56,6 +57,12 @@ update_one_bundle() {
 	gpg > "$bundleout" \
 		-a --export-options export-clean --export "${keys[@]}"
 
+	mkdir -- "$bundleeachdir"
+	for key in "${keys[@]}"; do
+		gpg > "$bundleeachdir/${key}.asc" \
+			-a --export-options export-clean --export "$key"
+	done
+
 	export GNUPGHOME="$initial_GNUPGHOME"
 }
 
@@ -67,4 +74,4 @@ tree "$dumpsdir" 2>/dev/null || ls -lR "$dumpsdir"
 
 cd "$TopDir/bundles"
 ls -l
-openssl dgst -sha256 ./* | sed 's,(\./,(,'
+openssl dgst -sha256 ./*.asc | sed 's,(\./,(,'
