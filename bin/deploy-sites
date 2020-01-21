@@ -16,15 +16,20 @@ test -d "$TopDir/sites"           || die "missing sites dir"
 deploy_rsync() {
 	local site="${1:?}" target="${2:?}"
 	local rsync_opts opt should_delete
+	local rchmod
 	shift 2
 
-	rsync_opts=(-crlv --chmod=u=rwX,go=rX)
 	should_delete=false
+	rchmod='u=rwX,go=rX'
 	for opt; do
 		case "$opt" in
+		rsync) true ;;
 		delete) should_delete=true ;;
+		group-write-dirs) rchmod='D775,F644' ;;
+		*) die "unrecognized deploy option: '${opt}'" ;;
 		esac
 	done
+	rsync_opts=(-crlv "--chmod=$rchmod")
 	#rsync_opts+=(--dry-run)
 
 	rsync "${rsync_opts[@]}" "$TopDir/sites/$site/" "$target/"
