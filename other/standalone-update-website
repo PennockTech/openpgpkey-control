@@ -124,6 +124,9 @@ class Email:
     def __str__(self):
         return self.lower
 
+    def __lt__(self, other):
+        return self.lower < other.lower
+
     def encoded_lhs(self):
         h = hashlib.sha1(self.lhs.encode('ASCII'))
         return encode(h.digest()).decode('ASCII')
@@ -188,20 +191,21 @@ def _main():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-d', '--domain',
-                        type=str, required=True,
+                        type=str, required=True, nargs='+',
                         help='which domain name to look for in key uids')
     parser.add_argument('-o', '--output-dir',
                         type=str, required=True, metavar='DIR',
                         help='where to write the output tree')
     parser.add_argument('-k', '--keys-file',
-                        action='append', metavar='FILE', required=True,
+                        type=str, required=True, nargs='+',
+                        metavar='FILE',
                         help='one or more PGP key files to scan')
     parser.add_argument('--gpg-command',
                         type=str, default='gpg',
                         help='Change the gpg command to invoke [%(default)s]')
     options = parser.parse_args()
 
-    options.domain = options.domain.lower()
+    allowed_domains = set(d.lower() for d in options.domain)
     output_dir = pathlib.Path(options.output_dir)
     if not output_dir.exists():
         raise Exit(f'output directory {shlex.quote(str(output_dir))} must exist')
@@ -216,7 +220,7 @@ def _main():
         gpg = GPGHandler(options=options, cmd_env=sub_env)
         gpg.key_import(options.keys_file)
         for email in gpg.emails_in_keyring():
-            if email.domain != options.domain:
+            if email.domain not in allowed_domains:
                 continue
             with open(hu_dir / email.wkd_local, 'wb') as out:
                 gpg.export_binary_key(email=email, out=out)
