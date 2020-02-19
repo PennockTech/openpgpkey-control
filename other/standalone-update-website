@@ -210,9 +210,12 @@ def _main():
     if not output_dir.exists():
         raise Exit(f'output directory {shlex.quote(str(output_dir))} must exist')
 
-    hu_dir = output_dir / '.well-known' / 'openpgpkey' / 'hu'
+    wkd_wellknown = output_dir / '.well-known' / 'openpgpkey'
+    hu_dir = wkd_wellknown / 'hu'
     hu_dir.mkdir(parents=True, exist_ok=True)
 
+    with open(wkd_wellknown / 'policy', 'w') as policy:
+        pass
 
     with tempfile.TemporaryDirectory() as gnupghome:
         sub_env = os.environ.copy()
