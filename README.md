@@ -28,6 +28,9 @@ In addition, the `bundles/` directory is deleted and recreated from from
 another tool; these files are not openpgpkey, but they are in the family of
 "things which get published for others to rely upon".
 
+The `other` directory contains "related tools" which might be of interest, but
+are not needed for these workflows.
+
 
 ### Config
 
@@ -70,6 +73,20 @@ For DNS zonefile fragments, you use `update-keyrings` then
 `update-dns-fragments`.
 
 For bundles of distributable keyrings, you use `update-bundles`.
+
+#### Other
+
+* `other/standalone-update-website`: this is pretty much `deploy-sites`
+  rewritten into Python with `lib/python/pdpzbase32.py` inline, so that it is
+  a stdlib-only script for generating a website.
+  + This tool does not use config files, it is explicitly pointed at one or
+    more PGP key files to import, and it then deploys the content area.
+  + This tool currently only supports the "direct method" layout, for use on a
+    main web-site where OpenPGP keys are being added as additional content.
+    So it does not generate a top-level stub file.
+  + I wrote this adaptation to be able to use it elsewhere, but it's all based
+    on this repository's code and I'm sharing it for wider use here.
+
 
 ### Customizing
 
