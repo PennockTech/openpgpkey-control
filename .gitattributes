@@ -1,0 +1,8 @@
+# GitHub determines file-types using <https://github.com/github/linguist>
+# which can override the determinations using Git Attributes.
+# Exactly what I was hoping for as a best-case scenario.
+
+/dns/fragments/**	linguist-language=DNS-Zone linguist-generated
+/keyrings/**		linguist-language=Public-Key linguist-vendored
+/bundles/**		linguist-language=Public-Key linguist-vendored
+/sites/**		linguist-generated
