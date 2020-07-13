@@ -25,7 +25,6 @@ import hashlib
 import pathlib
 import os
 import re
-import shlex
 import subprocess
 import sys
 import tempfile
@@ -34,9 +33,12 @@ ZOOKO32_ALPHABET = b'ybndrfg8ejkmcpqxot1uwisza345h769'
 
 
 class Error(Exception):
+    """Base class for exceptions from this script."""
     pass
 
+
 class Exit(Error):
+    """An exception which should abort the script without a stack trace."""
     pass
 
 
@@ -114,6 +116,8 @@ def decode(s):
 
 
 class Email:
+    """An email address, with WKD encoding support."""
+
     def __init__(self, full):
         self.original = full
         # WKD also lower-cases the LHS, so in this operating context,
@@ -156,7 +160,7 @@ class GPGHandler:
             check=True, env=self.cmd_env)
 
     def keyring_list(self):
-        subprocess.run(self._cmd(['--list-keys']), env=self.cmd_env)
+        subprocess.run(self._cmd(['--list-keys']), env=self.cmd_env, check=True)
 
     def raw_emails_in_keyring(self):
         lister = subprocess.Popen(
@@ -231,16 +235,26 @@ def _main():
     hu_dir.mkdir(parents=True, exist_ok=True)
 
     with open(wkd_wellknown / 'policy', 'w') as policy:
-        pass
+        # We don't want to write any data, we want it to exist, truncated.
+        # We just _need_ the pass, but Python linters complain "policy" is unused
+        # if we just do that.  So issue one extra syscall.
+        policy.tell()  # dummy
+        # without the dummy, we just need: pass
 
     with tempfile.TemporaryDirectory() as gnupghome:
         sub_env = os.environ.copy()
         sub_env['GNUPGHOME'] = gnupghome
         gpg = GPGHandler(options=options, cmd_env=sub_env)
         gpg.key_import(options.keys_file)
+
         if options.verbose >= 3:
             print('', end='', flush=True)
-            gpg.keyring_list()
+            try:
+                gpg.keyring_list()
+            except Exception as e:
+                # Don't abort, this is a verboseness introspection aid only.
+                print(f'getting PGP key listing from GnuPG failed: {e}', file=sys.stderr)
+
         for email in gpg.emails_in_keyring():
             if email.domain not in allowed_domains:
                 if options.verbose >= 3:
