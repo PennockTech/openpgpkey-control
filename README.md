@@ -61,7 +61,7 @@ are not needed for these workflows.
    so are not made (exclusively) from the versions of the files included in
    the repo.
 
-Both of the first three tools mutate the content of this repository, but will
+Each of the first three tools mutate the content of this repository, but will
 often re-create the exact same content, letting Git handle the lack of
 differences.  The fourth tool should make no local changes.  The fifth tool
 creates content excluded from this repository.
