@@ -1,6 +1,102 @@
 openpgpkey
 ==========
 
+OpenPGP Federated Keyserving support.
+Take control of making your public keys available to others!
+
+This repository has tools to help you manage making the public keys available
+to others in two different ways:
+
+1. A standalone tool you can integrate into your existing website build steps,
+   eg as a Gulp task.
+2. This repo is a template you can fork and use to manage the keys, either for
+   a separate website or for an overlay.  Examples are included of how to go
+   one step further and build a Docker image to be the webserver.
+
+
+## Why
+
+Reliability.  Safety.  Accountability.  Avoiding known current problems.
+
+OpenPGP is a standard for some tasks in cryptography, supporting signing
+things and encrypting things, without any central control authority saying who
+can do what.  OpenPGP is not tied to any communications platform and there are
+multiple interoperable implementations.
+
+OpenPGP is old and has some warts; it is far from a perfect standard.  But it
+is a standard and sees wide use in many problem spaces.  Tools designed for
+one problem space, eg private communications, may be a better solution _there_
+but folks running critical services find that OpenPGP is important for some
+tasks.  It needs to work.
+
+Historically, “public keyservers” collected lots of public keys and made them
+available to all, without vetting.  It was convenient, but it was a crutch.
+There are a few left, but far fewer than there used to be and the reliability
+of these volunteer (or other) run services has suffered.
+There are people actively trying to destroy these public-good services; the
+author of the tooling here used to run such a keyserver and was active in the
+community of volunteers.
+_(I left because of what I perceive as a large increase in legal risk in continuing to do so.)_
+
+There are design notes for what future public keyservers might have to do, but
+the design trade-offs mean it's important for people who own PGP keys to be
+able to make the full keys available under their own control.
+More on that approach can be found in
+<https://tools.ietf.org/html/draft-dkg-openpgp-abuse-resistant-keystore>.
+
+So we need to make keys available, without relying upon the charity of others.
+We need this to not involve a lot of manual effort by each person trying to
+fetch or update a key.  Putting keys somewhere on a download site is better
+than not making them available, but we need something predictable.
+
+Each OpenPGP key has one or more user identities as part of it; usually those
+contain an email address.  Email addresses use the DNS to provide federation,
+and we can use that federation system, the DNS, to find places where keys in
+that domain can be fetched from.
+
+There are currently five designs for how to do this.  Three require updates to
+DNS for changes in which keys are available, or even for updates to those
+keys.
+This has some benefits in some cases but is a non-starter for many people.
+One more design is public unauthenticated LDAP, which is perhaps not something
+folks will casually enter into.
+
+This leaves one design, which lets folks with a domain setup a website to
+provide keys in a fixed layout, with nothing special added to DNS beyond a
+host existing.  The keys are fetched via HTTPS.  This design is called
+“Web Key Directory”, WKD, which is supported by some client tooling and which
+is seeing increasing adoption in the open source community, for providing the
+keys of project members.
+
+The GnuPG project have a system for updating WKD keys via email, but that's
+only one approach.  If you have authoritative knowledge of which keys should
+be served for which email addresses in your domain, then you can publish those
+keys.
+
+You can put these keys on the website which serves your domain apex, if you
+have such a thing, or you can use the `openpgpkey` hostname inside your domain
+to run a separate website.
+
+That's where this repository comes in.
+This repository is a way to track and manage the updates to keys for an
+organization, and deploy them.
+This is designed to be easy to fork and adapt for your use-cases, using this
+as a template.
+The tooling manages the life-cycle of the keys using very simple configuration
+files and includes one example of how to deploy live via rsync and another
+example of how to build a Docker image running a webserver for the separate
+website scenario.
+
+We also have a standalone tool for integrating into a different workflow, so
+that site building flows can make including the OpenPGP keys just a single
+build-step.
+
+* <https://tools.ietf.org/html/draft-koch-openpgp-webkey-service>
+* <https://wiki.gnupg.org/WKD>
+
+
+## What's included here
+
 Tools to manage the content of OpenPGP Web Key Directory websites, aka
 the openpgpkey well-known area.
 
