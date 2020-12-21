@@ -139,6 +139,9 @@ are not needed for these workflows.
   generate fragments of zonefiles listing PGP-related material.
 * `bundle.*` are files named for the bundle they create, listing the PGP keys
   to be included in those bundles.
+* `thirdparty.*` are files listing additional keys, which will not be directly
+   included in any results just because of being listed here, but signatures
+   from these keys may be persisted in bundles too.
 
 
 ### Tools

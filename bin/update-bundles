@@ -32,16 +32,27 @@ trap remove_tmp EXIT INT TERM
 # So this works directly from your local keyring.
 update_one_bundle() {
 	local bundleconf bundlesrc bundlename bundleout bundleeachdir
-	local tmp src ghome
+	local tmp src ghome kf
+	local -a keys thirdparty_files third_keys
 	bundleconf="${1:?need a bundle.foo file}"
 	bundlesrc="$TopDir/config/$bundleconf"
 	bundlename="${bundle#bundle.}"
 	bundleout="$TopDir/bundles/${bundlename}.asc"
 	bundleeachdir="$TopDir/bundles/each-${bundlename}"
+	thirdparty_files=(
+		"$TopDir/config/thirdparty.$bundlename"
+		"$TopDir/config/thirdparty.ALL"
+	)
 	tmp="$dumpsdir/$bundlename"
-	mkdir -- "$tmp"
+	mkdir -m 0700 -- "$tmp"
 
 	keys=($(grep '^[^#]' -- "$bundlesrc" | sed $'s/[ \t]*#.*$//' | sort -u))
+	third_keys=()
+	for kf in "${thirdparty_files[@]}"; do
+		test -f "$kf" || continue
+		third_keys+=($(grep '^[^#]' -- "$kf" | sed $'s/[ \t]*#.*$//' | sort -u))
+	done
+
 	for key in "${keys[@]}"; do
 		src="$TopDir/keyrings/${key}.asc"
 		test -f "$src" || continue
@@ -49,7 +60,8 @@ update_one_bundle() {
 	done
 	export GNUPGHOME="$initial_GNUPGHOME"
 	gpg > "$tmp/from-local-keyring.asc" \
-		-a --export-options no-export-attributes,export-clean --export "${keys[@]}"
+		-a --export-options no-export-attributes,export-clean \
+		--export "${keys[@]}" "${third_keys[@]}"
 
 	export GNUPGHOME="$tmp"
 	gpg --import -- "$tmp"/*.asc

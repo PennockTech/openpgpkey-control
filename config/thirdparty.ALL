@@ -1,0 +1,28 @@
+# Keys listed in this file are for third-party signatures.
+#
+# The keys themselves will not be directly included in a keyring just because
+# they're in this file; some other configuration might still include them.
+# (Ie, being here is insufficient to include the keys, not a barrier).
+# Signatures made by these keys, if those signatures are locally known,
+# _will_ be included in the bundles.
+#
+# This is thirdparty.ALL -- keys listed here will be accepted as third-party
+# signatures in ALL bundles.
+
+# General third-party trusted introducers
+A31D4F81EF4EBD07B456FA04D2BB0D0165D0FD58	# CA Cert Signing Authority (Root CA)
+
+# Linux kernel maintainers
+# (mostly picked from among those who signed David's key)
+3AB057B7E78D945C8C5591FBD36F769BC11804F0	# Theodore Ts'o
+50EBED48216A2F163FEE9C778DCE35563022E57A	# Jonathan Corbet
+647F28654894E3BD457199BE38DBBDC86092693E	# Greg Kroah-Hartman
+7EAAC9693E7D220546BE576CBDA06085493BACE4	# H. Peter Anvin
+ABAF11C65A2970B130ABE3C479BE3E4300411886	# Linus Torvalds
+D5606E73C8B46271BEAD9ADF814AE47C214854D6	# James Bottomley
+DE0E66E32F1FDD0902666B96E63EDCA9329DD07E	# Konstantin Ryabitsev
+#
+# If you have to pick just one of these to trust, pdp thinks Konstantin's:
+# he's a kernel.org admin, maintainer of the kernel maintainer's PGP keyring
+# git repository (https://git.kernel.org/pub/scm/docs/kernel/pgpkeys.git),
+# and has done a lot of good work on the practical side of the PGP ecosystem.
