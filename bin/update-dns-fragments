@@ -48,14 +48,19 @@ gpg --import -- "$TopDir/keyrings"/*.asc
 # into Python.  Working beats unwritten perfect.
 #
 # Beware multiple keys for the same UID, during transitions.
+#
+# Beware that sometimes GnuPG will export a multiline key with a blank line
+# before the closing parens.  Aargh!
 
 sort_by_rrname() { "$python" -c '
 import collections, sys
 all_entries = collections.defaultdict(list)
 entry = []
 rrname = None
+in_parens = False
 for lineno0, line in enumerate(sys.stdin):
-  if not line.rstrip():
+  fragment = line.rstrip()
+  if not fragment and not in_parens:
     if entry:
       if not rrname:
         raise Exception("no rrname in stanza, line {}".format(lineno0+1))
@@ -68,6 +73,10 @@ for lineno0, line in enumerate(sys.stdin):
     if rrname is not None:
       raise Exception("two rrname lines in one stanza, line {}".format(lineno0+1))
     rrname = line.split()[0]
+    if fragment.endswith("("):
+      in_parens = True
+  if fragment.endswith(")"):
+    in_parens = False
 
 for key in sorted(all_entries):
   for entry in all_entries[key]:
