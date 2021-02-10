@@ -1,3 +1,5 @@
 # Deploys via SSH to tower
 spodhuis.org		tower:/www/openpgpkey.spodhuis.org/content	rsync:delete
 pennock-tech.com	tower:/www/openpgpkey.pennock-tech.com/content	rsync:delete
+globnix.org		tower:/www/openpgpkey.globnix.org/content	rsync:delete
+grumpy-troll.org	tower:/www/openpgpkey.grumpy-troll.org/content	rsync:delete
