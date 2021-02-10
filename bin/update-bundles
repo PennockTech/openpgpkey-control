@@ -17,6 +17,9 @@ bundle_files=( bundle.* )
 cd ..
 
 [[ "${#bundle_files[@]}" -gt 0 ]] || die "no bundles defined"
+if [[ "${#bundle_files[@]}" -eq 1 ]] && [[ "${bundle_files[0]}" == 'bundle.*' ]]; then
+	die "no bundles defined"
+fi
 
 rm -rf "$TopDir/bundles"
 mkdir -pv "$TopDir/bundles"
