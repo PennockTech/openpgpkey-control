@@ -8,16 +8,57 @@ readonly TopDir="$(cd "$(dirname "$ScriptPath")"; cd ..; pwd)"
 note() { printf >&2 '%s: %s\n' "$ProgramName" "$*"; }
 die() { note "$@"; exit 1; }
 
+: "${GNUPGHOME:=$HOME/.gnupg}"
+readonly initial_GNUPGHOME="$GNUPGHOME"
+thirdparty_files=(
+	"$TopDir/config/thirdparty.ALL"
+)
+
 test -f "$TopDir/config/keys"
 keys=($(grep '^[^#]' "$TopDir/config/keys" | sort -u))
 
 # Trust that test -f check to have validated that $TopDir is safe to use before
 # nuking keyrings and recreating it.
 
-rm -rf "$TopDir/keyrings"
-mkdir -pv "$TopDir/keyrings"
+# Ensure that someone new updating these at least gets all the signature for
+# our own keys.  This doesn't cover the true third-party sigs, that's FIXME.
+if [ -d "$TopDir/keyrings/cross-signed" ]; then
+	gpg --import "$TopDir/keyrings/cross-signed"/*.asc
+fi
 
+rm -rf "$TopDir/keyrings"
+mkdir -pv "$TopDir/keyrings/minimal"
+mkdir -pv "$TopDir/keyrings/unfiltered"
+mkdir -pv "$TopDir/keyrings/cross-signed"
+
+note "First pass: minimal and unfiltered"
 for key in "${keys[@]}"; do
 	note "Key: $key"
-	gpg --export-options export-minimal -a --export "$key" > "keyrings/${key}.asc"
+	gpg --export-options export-minimal -a --export "$key" > "keyrings/minimal/${key}.asc"
+	gpg -a --export "$key" > "keyrings/unfiltered/${key}.asc"
+done
+
+workdir="$(mktemp -d "${TMPDIR:-/tmp}/wkd-keyrings.XXXXXXXX")" || die "failed to create a temp dir"
+remove_tmp() { rm -rf -- "$workdir"; }
+trap remove_tmp EXIT INT TERM
+
+third_keys=()
+for kf in "${thirdparty_files[@]}"; do
+	test -f "$kf" || continue
+	third_keys+=($(grep '^[^#]' -- "$kf" | sed $'s/[ \t]*#.*$//' | sort -u))
+done
+gpg > "$workdir/thirdparty.asc" \
+	-a --export-options no-export-attributes,export-clean \
+	--export "${third_keys[@]}"
+
+gpgdir="$workdir/gnupghome"
+mkdir -m 0700 -- "$gpgdir"
+export GNUPGHOME="$gpgdir"
+gpg --import keyrings/unfiltered/*.asc
+gpg --import "$workdir/thirdparty.asc"
+
+note "Second pass: cross-signed"
+for key in "${keys[@]}"; do
+	note "Key: $key"
+	gpg --export-options export-clean -a --export "$key" > "keyrings/cross-signed/${key}.asc"
 done

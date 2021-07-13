@@ -69,7 +69,7 @@ for key in "${Keys[@]}"; do
 	# quiet for `please do a --check-trustdb` warnings
 	emails=($(
 		gpg --quiet --batch --with-colons --import-options show-only \
-			--import "keyrings/${key}.asc" |
+			--import "keyrings/minimal/${key}.asc" |
 			emails_from_colon_listing |
 			sort -u
 		))
@@ -89,7 +89,7 @@ print(pdpzbase32.encode(hashlib.sha1(sys.argv[1].lower().encode("ASCII")).digest
 		for wellknown in "$WellKnownTop/$domain" "$WellKnownTop"; do
 			d="$TopDir/sites/$domain/$wellknown/hu"
 			touch "$d/$encoded_lhs"
-			gpg --dearmor < "keyrings/${key}.asc" >> "$d/$encoded_lhs"
+			gpg --dearmor < "keyrings/cross-signed/${key}.asc" >> "$d/$encoded_lhs"
 		done
 	done
 done

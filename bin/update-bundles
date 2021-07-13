@@ -57,7 +57,7 @@ update_one_bundle() {
 	done
 
 	for key in "${keys[@]}"; do
-		src="$TopDir/keyrings/${key}.asc"
+		src="$TopDir/keyrings/cross-signed/${key}.asc"
 		test -f "$src" || continue
 		cp -- "$src" "$tmp/./"
 	done

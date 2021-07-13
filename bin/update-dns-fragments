@@ -39,7 +39,7 @@ trap remove_tmp EXIT INT TERM
 export GNUPGHOME="$top_tmp_dir/gnupghome"
 mkdir -m 0700 -- "$GNUPGHOME"
 
-gpg --import -- "$TopDir/keyrings"/*.asc
+gpg --import -- "$TopDir/keyrings/minimal"/*.asc
 
 # I'd usually do this in Perl with a grotesque one-liner using -00 and a
 # schwartzian transform, but this repo already is bash+python,
