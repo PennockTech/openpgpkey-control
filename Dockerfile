@@ -1,4 +1,7 @@
-FROM golang:1.13.5-alpine3.11 AS builder
+ARG GOPROXY=''
+
+FROM golang:1.17.3-alpine3.14 AS builder
+ARG GOPROXY
 
 LABEL maintainer="Phil Pennock <noc+openpgpkey@pennock-tech.com>"
 
@@ -8,11 +11,10 @@ COPY . /tmp/openpgpkey/
 
 RUN apk add --update git
 
-RUN git clone https://github.com/mholt/caddy && cd caddy \
-	&& sed -i~ -e 's/EnableTelemetry = true/EnableTelemetry = false/' caddy/caddymain/run.go \
-	&& CGO_ENABLED=0 go install -ldflags -s ./caddy/...
+RUN git clone https://github.com/caddyserver/caddy && cd caddy \
+	&& CGO_ENABLED=0 go install -ldflags -s ./cmd/caddy/...
 
-FROM alpine:3.11
+FROM alpine:3.14
 
 COPY --from=builder /go/bin/caddy /bin/
 COPY --from=builder /tmp/openpgpkey/ /srv/repo
@@ -20,7 +22,7 @@ COPY --from=builder /tmp/openpgpkey/ /srv/repo
 VOLUME /root/.caddy
 
 WORKDIR /srv/repo
-CMD ["caddy"]
+CMD ["caddy", "run"]
 
 EXPOSE 80
 EXPOSE 443

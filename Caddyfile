@@ -4,15 +4,17 @@
 #    + nb: /srv/repo comes from the Dockerfile, the rest of the `root`
 #      directive is relative to this git repository.
 #  * repeat the stanza if serving multiple domains,
-#  * When ready, comment out the `tls` sub-stanza to switch from Let's Encrypt
-#    staging to production service.
+#  * When ready, change from `tls internal` to tls which uses a public CA;
+#    the commented-out example here uses Lets Encrypt's Staging, but to be
+#    trusted by clients you'll need to switch to LE Production
 
 http://openpgpkey.example.org, https://openpgpkey.example.org {
-	log stderr
-	errors stderr
-	root /srv/repo/sites/example.org
+	log
+	file_server
+	root * /srv/repo/sites/example.org
 
-	tls {
-		ca https://acme-staging-v02.api.letsencrypt.org/directory
-	}
+	tls internal
+	#tls {
+	#	ca https://acme-staging-v02.api.letsencrypt.org/directory
+	#}
 }

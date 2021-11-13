@@ -215,7 +215,7 @@ before use.
 <a href="https://caddyserver.com/">Caddy</a> is a web-server which is
 small and can automatically create and maintain HTTPS certs; this is
 controlled with the `Caddyfile` configuration.  The example configuration here
-is for version 1 of Caddy, not version 2 (currently in beta).
+is for version 2 of Caddy.
 
 The `Caddyfile` will need to be manually updated to list the websites you wish
 to serve for.
@@ -236,8 +236,8 @@ try to get a new certificate, with a new account.
 
 To use these for yourself, you should edit both:
  * Dockerfile: put a better maintainer label in, at least
- * Caddyfile: edit domains, and when ready comment out the staging ACME
-   provider from Let's Encrypt to switch to the production service
+ * Caddyfile: edit domains, and when ready switch to the staging ACME
+   provider, and then to a production service
    (ie: start requesting Real certificates)
 
 #### Example
@@ -258,6 +258,17 @@ $ docker run -it --rm \
      -p 5080:80 -p 5443:443 \
      -v "$HOME/DockerVolumes/openpgpkey-caddy:/root/.caddy" \
      openpgpkey-caddy:latest
+```
+
+For testing on a local machine with docker, curl's `--connect-to` option will
+likely help:
+
+```sh
+Site=openpgpkey.example.org
+curl -k --connect-to $Site:443:localhost:5443 https://$Site/
+curl -k --connect-to $Site:443:localhost:5443 https://$Site/hu/policy
+gpg --with-wkd-hash --list-secret-keys
+curl -sk --connect-to $Site:443:localhost:5443 https://$Site/.well-known/openpgpkey/hu/${base32str} | gpg --show-keys
 ```
 
 When you've tested that everything works, comment out the staging CA usage for
