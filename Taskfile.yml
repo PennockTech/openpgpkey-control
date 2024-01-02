@@ -1,0 +1,119 @@
+---
+version: '3'
+
+tasks:
+  default:
+    deps: [help]
+
+  help:
+    silent: true
+    cmds:
+      - |
+        cat <<EOHELP
+        There are various commands available, see \`task -l\` for more details
+        EOHELP
+
+  all:
+    desc: "Just do everything, after some key has been updated"
+    cmds:
+      - task: update:all
+      - task: git:commit-autoupdates
+      - task: git:push
+      - task: deploy:sites
+
+  update:all:
+    desc: "Do everything to update the repo, without deploying"
+    # Don't use deps, it provides no ordering
+    # We don't want 'update:sites' to implicitly run 'update:keyrings' but if
+    # running both, we want it to happen afterwards.
+    # The problem is that update:keyrings is heavyweight and depends upon
+    # things out-of-scope, otherwise we'd just always include it in `deps` for
+    # each other task.
+    cmds:
+      - task: update:keyrings
+      - task: update:sites
+      - task: update:dns-fragments
+      - task: update:bundles
+
+  update:keyrings:
+    desc: "Import repo keyring data from invoker's account keyring"
+    generates:
+      - keyrings/**/*
+    # We always run this, we rely upon external-to-repo data:
+    method: none
+    cmds:
+      - ./bin/update-keyrings
+
+  update:sites:
+    desc: "Delete and recreate the sites/ generated data"
+    sources:
+      - config/**/*
+      - keyrings/**/*
+    generates:
+      - sites
+      - sites/**
+    cmds:
+      - ./bin/update-sites
+
+  update:dns-fragments:
+    desc: "Delete and recreate the dns/ generated data"
+    sources:
+      - config/**/*
+      - keyrings/**/*
+    generates:
+      - dns
+      - dns/**
+    cmds:
+      - ./bin/update-dns-fragments
+
+  update:bundles:
+    desc: "Delete and recreate the bundles of useful keyrings"
+    sources:
+      - config/**/*
+      - keyrings/**/*
+    generates:
+      - bundles
+      - bundles/**
+    cmds:
+      - ./bin/update-bundles
+    env:
+      OPENPGPKEY_NO_BUNDLES_OKAY: "true"
+
+  git:check-noauto-changes:
+    internal: true
+    cmds:
+      - cmd: git update-index --refresh
+        # this exits 1 when there are changes, but we expect there to be even in the good case
+        ignore_error: true
+      - cmd: |
+          not_ours="$(git ls-files --exclude-standard --modified . ':!:keyrings' ':!:sites' ':!:dns')"
+          [[ -n "$not_ours" ]] || exit 0
+          printf >&2 "commit-autoupdates: ERROR: changes which aren't auto-updates exist: %s\n" "$not_ours"
+          exit 65  # sysexits EX_DATAERR
+        silent: true
+
+  git:commit-autoupdates:
+    desc: "Commit our auto-update changes into Git"
+    sources:
+      - keyrings/**/*
+      - sites/**/*
+      - dns/**/*
+    cmds:
+      - task: git:check-noauto-changes
+      - git add keyrings sites dns
+      - |
+        anything="$(git diff --name-only --staged keyrings sites dns)"
+        if [[ -z "$anything" ]]; then
+          printf >&2 "\ncommit-autoupdates: nothing to commit, SKIPPING COMMIT\n\n"
+          exit 0
+        fi
+        git commit --only keyrings sites dns
+
+  git:push:
+    desc: "Push git repo"
+    cmds: ["git push"]
+
+  deploy:sites:
+    desc: "Deploy to websites"
+    cmds: ["./bin/deploy-sites"]
+
