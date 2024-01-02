@@ -1,6 +1,15 @@
 #!/bin/bash -eu
-# Keep this first, $_ changes after first command:
-readonly ScriptPath="$_"
+# Do not use $_ to set ScriptPath, since script runners such as 'task' don't
+# change $_ before running the commands.
+# We do want a _resolved_ path to the script.
+ScriptPath="$0"
+StartDir="$(pwd)"
+case "$ScriptPath" in
+	/*) true ;;
+	./*) ScriptPath="${StartDir}/${ScriptPath#./}" ;;
+	*) ScriptPath="${StartDir}/${ScriptPath}" ;;
+esac
+readonly StartDir ScriptPath
 
 readonly ProgramName="$(basename "$0" .sh)"
 readonly TopDir="$(cd "$(dirname "$ScriptPath")"; cd ..; pwd)"
@@ -62,3 +71,5 @@ for key in "${keys[@]}"; do
 	note "Key: $key"
 	gpg --export-options export-clean -a --export "$key" > "keyrings/cross-signed/${key}.asc"
 done
+
+note "done updating keyrings/ directory"
