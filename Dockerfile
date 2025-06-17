@@ -1,6 +1,6 @@
 ARG GOPROXY=''
 
-FROM golang:1.17.3-alpine3.14 AS builder
+FROM golang:1.24.4-alpine3.22 AS builder
 ARG GOPROXY
 
 LABEL maintainer="Phil Pennock <noc+openpgpkey@pennock-tech.com>"
