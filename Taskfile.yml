@@ -1,6 +1,16 @@
 ---
 version: '3'
 
+vars:
+  GitPushSubcommands:
+    - push
+
+includes:
+  overrides:
+    taskfile: Taskfile.local.yml
+    flatten: true
+    optional: true
+
 tasks:
   default:
     deps: [help]
@@ -111,7 +121,11 @@ tasks:
 
   git:push:
     desc: "Push git repo"
-    cmds: ["git push"]
+    cmds:
+      - |
+        {{- range $sub := .GitPushSubcommands}}
+        git {{$sub}}
+        {{- end }}
 
   deploy:sites:
     desc: "Deploy to websites"
