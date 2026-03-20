@@ -157,6 +157,7 @@ tasks:
 
   fly:update:
     # no desc, hide, but not internal
+    deps: [_have:sites]
     cmd: "{{.fly}} deploy --label 'tech.pennock.repo_status={{.repo_status}}'"
 
   fly:status:
@@ -176,4 +177,10 @@ tasks:
     cmds:
       - for: { var: fly_cert_hostnames }
         cmd: "{{.fly}} certs add {{.ITEM}}"
+
+  _have:sites:
+    internal: true
+    silent: true
+    run: once
+    cmd: test -d sites
 
