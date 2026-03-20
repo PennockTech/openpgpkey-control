@@ -5,6 +5,28 @@ vars:
   GitPushSubcommands:
     - push
 
+  fly:
+    sh: command -v flyctl || command -v fly || exit 69
+  repo_status:
+    sh: |-2
+      p1="$(git log -n 1 --pretty='%cs-%h')"
+      p2="$(git describe --tags --always --dirty)"
+      if [ "${p1##*-}" = "${p2%%-*}" ]; then
+        printf '%s-%s\n' "${p1%-*}" "$p2"
+      else
+        printf '%s-%s\n' "$p1" "$p2"
+      fi
+
+  fly_cert_hostnames:
+    - openpgpkey.globnix.org
+    - openpgpkey.grumpy-troll.org
+    - openpgpkey.pennock-tech.com
+    - openpgpkey.spodhuis.org
+
+  # These come from 'fly launch', 'task fly:setup:create-app'
+  #ipv4_fly_shared: XXX
+  #ipv6_fly_dedicated: XXX
+
 includes:
   overrides:
     taskfile: Taskfile.local.yml
@@ -129,5 +151,28 @@ tasks:
 
   deploy:sites:
     desc: "Deploy to websites"
-    cmds: ["./bin/deploy-sites"]
+    cmds:
+      - task: fly:update
+
+  fly:update:
+    # no desc, hide, but not internal
+    cmd: "{{.fly}} deploy --label 'tech.pennock.repo_status={{.repo_status}}'"
+
+  fly:status:
+    desc: see deployment status
+    cmds:
+      - "{{.fly}} status"
+      - "{{.fly}} image show"
+      - "echo 'Repo: {{.repo_status}}'"
+
+  fly:setup:create-app:
+    desc: Create app (use only if does not already exist)
+    cmd: "{{.fly}} launch"
+
+  fly:setup:create-certs:
+    desc: Create cert (use only if does not already exist)
+    # Only do this after DNS is pointing to the app
+    cmds:
+      - for: { var: fly_cert_hostnames }
+        cmd: "{{.fly}} certs add {{.ITEM}}"
 
