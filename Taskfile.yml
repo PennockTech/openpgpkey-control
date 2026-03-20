@@ -24,8 +24,9 @@ vars:
     - openpgpkey.spodhuis.org
 
   # These come from 'fly launch', 'task fly:setup:create-app'
-  #ipv4_fly_shared: XXX
-  #ipv6_fly_dedicated: XXX
+  # Not currently used, but here for if I need them.
+  ipv4_fly_shared: 66.241.124.177
+  ipv6_fly_dedicated: 2a09:8280:1::e5:e6d6:0
 
 includes:
   overrides:
